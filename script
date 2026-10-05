@@ -1,0 +1,360 @@
+local P=game:GetService("Players")
+local R=game:GetService("RunService")
+local U=game:GetService("UserInputService")
+local TS=game:GetService("TweenService")
+
+local me=P.LocalPlayer
+local pg=me:WaitForChild("PlayerGui")
+local cam=workspace.CurrentCamera
+
+local AIM,NPC,LOCK=false,false,false
+local showA,showN=true,false
+local fov,aimFov,scale=70,100,1
+local third=false
+local oldCam={}
+local function mk(c,p)
+	for k,v in pairs(p) do c[k]=v end
+	return c
+end
+local function cr(x,r)
+	local c=Instance.new("UICorner",x)c.CornerRadius=UDim.new(0,r)
+end
+local function B(par,txt,pos,sz)
+	local b=mk(Instance.new("TextButton"),{
+		Parent=par,Text=txt,Position=pos,Size=sz,
+		BackgroundColor3=Color3.fromRGB(45,45,45),
+		TextColor3=Color3.new(1,1,1),
+		Font=Enum.Font.GothamBold,TextSize=14
+	})cr(b,10)return b
+end
+
+-- INTRO
+local I=mk(Instance.new("Frame"),{
+	Parent=pg,Size=UDim2.fromScale(1,1),
+	BackgroundColor3=Color3.new(0,0,0),ZIndex=50
+})
+local C=mk(Instance.new("TextLabel"),{
+	Parent=I,BackgroundTransparency=1,
+	Size=UDim2.fromScale(.2,.12),Position=UDim2.fromScale(.4,.36),
+	Text="🐱",TextScaled=true,ZIndex=51
+})
+local T=mk(Instance.new("TextLabel"),{
+	Parent=I,BackgroundTransparency=1,
+	Size=UDim2.fromScale(.8,.08),Position=UDim2.fromScale(.1,.49),
+	Text="MULTI AIM MENU",TextColor3=Color3.new(1,1,1),
+	Font=Enum.Font.GothamBold,TextScaled=true,ZIndex=51
+})
+local M=mk(Instance.new("TextLabel"),{
+	Parent=I,BackgroundTransparency=1,
+	Size=UDim2.fromScale(.8,.05),Position=UDim2.fromScale(.1,.58),
+	Text="made by: buidaboat07",TextColor3=Color3.new(0,0,0),
+	Font=Enum.Font.Gotham,TextScaled=true,ZIndex=51
+})
+
+task.spawn(function()
+	local h=0
+	while I.Parent do
+		h=(h+.004)%1
+		I.BackgroundColor3=Color3.fromHSV(h,1,1)
+		C.TextColor3=Color3.fromHSV((h+.35)%1,1,1)
+		task.wait()
+	end
+end)
+
+TS:Create(C,TweenInfo.new(.5,Enum.EasingStyle.Sine,Enum.EasingDirection.InOut,-1,true),
+	{Position=UDim2.fromScale(.4,.32)}):Play()
+
+for _,x in ipairs({C,T,M}) do
+	x.TextTransparency=1
+	TS:Create(x,TweenInfo.new(1),{TextTransparency=0}):Play()
+end
+task.wait(2.5)
+for _,x in ipairs({C,T,M}) do
+	TS:Create(x,TweenInfo.new(1.1),{TextTransparency=1}):Play()
+end
+TS:Create(I,TweenInfo.new(1.1),{BackgroundTransparency=1}):Play()
+task.wait(1.2)I:Destroy()
+
+-- DRAG
+local function drag(o,h)
+	local on,s,p
+	h.InputBegan:Connect(function(i)
+		if LOCK then return end
+		if i.UserInputType==Enum.UserInputType.MouseButton1
+		or i.UserInputType==Enum.UserInputType.Touch then
+			on=true;s=i.Position;p=o.Position
+		end
+	end)
+	U.InputChanged:Connect(function(i)
+		if on and(i.UserInputType==Enum.UserInputType.MouseMovement
+		or i.UserInputType==Enum.UserInputType.Touch)then
+			local d=i.Position-s
+			o.Position=UDim2.new(p.X.Scale,p.X.Offset+d.X,p.Y.Scale,p.Y.Offset+d.Y)
+		end
+	end)
+	U.InputEnded:Connect(function(i)
+		if i.UserInputType==Enum.UserInputType.MouseButton1
+		or i.UserInputType==Enum.UserInputType.Touch then on=false end
+	end)
+end
+
+-- MENU
+local OP=B(pg,"🐱",UDim2.new(.5,-26,0,20),UDim2.fromOffset(52,52))
+OP.TextSize=25
+
+local UI=mk(Instance.new("Frame"),{
+	Parent=pg,Size=UDim2.fromOffset(320,360),
+	Position=UDim2.new(.5,-160,.5,-180),
+	BackgroundColor3=Color3.fromRGB(25,25,25)
+})cr(UI,12)
+
+local HEAD=mk(Instance.new("TextLabel"),{
+	Parent=UI,Size=UDim2.new(1,-45,0,42),
+	BackgroundColor3=Color3.fromRGB(35,35,35),
+	Text="🐱 MULTI AIM MENU",TextColor3=Color3.new(1,1,1),
+	Font=Enum.Font.GothamBold,TextSize=15
+})
+local X=B(UI,"×",UDim2.new(1,-40,0,6),UDim2.fromOffset(32,32))
+X.TextSize=22
+drag(UI,HEAD)drag(OP,OP)
+
+X.MouseButton1Click:Connect(function()UI.Visible=false end)
+OP.MouseButton1Click:Connect(function()UI.Visible=not UI.Visible end)
+
+-- PAGES
+local names={"⚔️ COMBAT","🎥 FOV","👁️ 3RD","⚙️ SIZE"}
+local xp={0,84,158,232}
+local pgm={}
+for i,n in ipairs(names)do
+	local b=B(UI,n,UDim2.new(0,xp[i],0,45),
+		UDim2.fromOffset(i==1 and 72 or i==4 and 72 or 62,35))
+	local p=mk(Instance.new("Frame"),{
+		Parent=UI,Position=UDim2.new(0,10,0,88),
+		Size=UDim2.new(1,-20,1,-98),
+		BackgroundTransparency=1,Visible=i==1
+	})
+	pgm[i]=p
+	b.MouseButton1Click:Connect(function()
+		for _,q in ipairs(pgm)do q.Visible=false end
+		p.Visible=true
+	end)
+end
+
+-- FLOAT BUTTONS
+local FA=B(pg,"🎯 AIM OFF",UDim2.new(.5,-62,.65,0),UDim2.fromOffset(125,42))
+local FN=B(pg,"🤖 AIM NPC OFF",UDim2.new(.5,-77,.73,0),UDim2.fromOffset(155,42))
+FN.Visible=false
+drag(FA,FA)drag(FN,FN)
+
+local function rainbow(b,on)
+	b:SetAttribute("R",on)
+	if not on then b.BackgroundColor3=Color3.fromRGB(45,45,45)return end
+	task.spawn(function()
+		local h=0
+		while b.Parent and b:GetAttribute("R")do
+			h=(h+.01)%1
+			b.BackgroundColor3=Color3.fromHSV(h,1,1)
+			task.wait()
+		end
+	end)
+end
+
+local function setA(v)
+	AIM=v;FA.Text=v and"🎯 AIM ON"or"🎯 AIM OFF";rainbow(FA,v)
+end
+local function setN(v)
+	NPC=v;FN.Text=v and"🤖 AIM NPC ON"or"🤖 AIM NPC OFF";rainbow(FN,v)
+end
+
+FA.MouseButton1Click:Connect(function()
+	if AIM then setA(false)else setN(false)setA(true)end
+end)
+FN.MouseButton1Click:Connect(function()
+	if NPC then setN(false)else setA(false)setN(true)end
+end)
+
+-- COMBAT
+local cb=pgm[1]
+local AB=B(cb,"🎯 AIM",UDim2.new(0,0,0,10),UDim2.new(1,0,0,45))
+local NB=B(cb,"🤖 AIM NPC",UDim2.new(0,0,0,68),UDim2.new(1,0,0,45))
+local LB=B(cb,"🔒 LOCK",UDim2.new(0,0,0,126),UDim2.new(1,0,0,45))
+
+AB.MouseButton1Click:Connect(function()
+	showA=not showA;FA.Visible=showA
+end)
+NB.MouseButton1Click:Connect(function()
+	showN=not showN;FN.Visible=showN
+end)
+LB.MouseButton1Click:Connect(function()
+	LOCK=not LOCK;LB.Text=LOCK and"🔓 UNLOCK"or"🔒 LOCK"
+end)
+
+-- SLIDER
+local function slider(par,name,min,max,val,y,fn)
+	local l=mk(Instance.new("TextLabel"),{
+		Parent=par,Position=UDim2.new(0,0,0,y),
+		Size=UDim2.new(1,0,0,28),BackgroundTransparency=1,
+		Text=name.." : "..val,TextColor3=Color3.new(1,1,1),
+		Font=Enum.Font.GothamBold,TextSize=14,
+		TextXAlignment=Enum.TextXAlignment.Left
+	})
+	local bar=mk(Instance.new("Frame"),{
+		Parent=par,Position=UDim2.new(0,0,0,y+35),
+		Size=UDim2.new(1,0,0,8),
+		BackgroundColor3=Color3.fromRGB(70,70,70)
+	})cr(bar,5)
+	local k=mk(Instance.new("TextButton"),{
+		Parent=bar,Size=UDim2.fromOffset(18,18),
+		AnchorPoint=Vector2.new(.5,.5),
+		Position=UDim2.fromScale((val-min)/(max-min),.5),
+		Text="",BackgroundColor3=Color3.new(1,1,1)
+	})cr(k,9)
+
+	local d=false
+	local function set(x)
+		local a=math.clamp((x-bar.AbsolutePosition.X)/bar.AbsoluteSize.X,0,1)
+		local v=math.floor(min+(max-min)*a+.5)
+		k.Position=UDim2.fromScale(a,.5)
+		l.Text=name.." : "..v
+		fn(v)
+	end
+	local function start(i)
+		if i.UserInputType==Enum.UserInputType.MouseButton1
+		or i.UserInputType==Enum.UserInputType.Touch then
+			d=true;set(i.Position.X)
+		end
+	end
+	bar.InputBegan:Connect(start)k.InputBegan:Connect(start)
+	U.InputChanged:Connect(function(i)
+		if d and(i.UserInputType==Enum.UserInputType.MouseMovement
+		or i.UserInputType==Enum.UserInputType.Touch)then set(i.Position.X)end
+	end)
+	U.InputEnded:Connect(function(i)
+		if i.UserInputType==Enum.UserInputType.MouseButton1
+		or i.UserInputType==Enum.UserInputType.Touch then d=false end
+	end)
+end
+
+-- FOV
+slider(pgm[2],"CAMERA FOV",40,120,70,10,function(v)
+	fov=v;cam.FieldOfView=v
+end)
+
+slider(pgm[2],"AIM FOV",10,500,100,85,function(v)
+	aimFov=v
+end)
+
+-- FOV CIRCLE
+local FC=mk(Instance.new("Frame"),{
+	Parent=pg,AnchorPoint=Vector2.new(.5,.5),
+	Position=UDim2.fromScale(.5,.5),
+	Size=UDim2.fromOffset(200,200),
+	BackgroundTransparency=1,
+	Visible=false,Active=false,ZIndex=0
+})
+local FS=Instance.new("UIStroke",FC)
+FS.Thickness=2
+FS.Transparency=.25
+cr(FC,999)
+
+R.RenderStepped:Connect(function()
+	FC.Size=UDim2.fromOffset(aimFov*2,aimFov*2)
+	FC.Visible=AIM or NPC
+	FC.Active=false
+end)
+
+-- SIZE
+slider(pgm[4],"SIZE BUTTONS",80,200,100,10,function(v)
+	scale=v/100
+	FA.Size=UDim2.fromOffset(125*scale,42*scale)
+	FN.Size=UDim2.fromOffset(155*scale,42*scale)
+end)
+
+-- THIRD PERSON
+local TB=B(pgm[3],"👁️ THIRD PERSON OFF",
+	UDim2.new(0,0,0,10),UDim2.new(1,0,0,45))
+
+local function thirdSet(v)
+	third=v
+	if v then
+		oldCam={cam.CameraType,cam.CameraSubject,
+			me.CameraMinZoomDistance,me.CameraMaxZoomDistance,me.CameraMode}
+		cam.CameraType=Enum.CameraType.Custom
+		me.CameraMinZoomDistance=8
+		me.CameraMaxZoomDistance=8
+		me.CameraMode=Enum.CameraMode.Classic
+		local h=me.Character and me.Character:FindFirstChildOfClass("Humanoid")
+		if h then h.CameraOffset=Vector3.new(0,1.5,0)end
+	else
+		cam.CameraType=oldCam[1]or Enum.CameraType.Custom
+		cam.CameraSubject=oldCam[2]
+		me.CameraMinZoomDistance=oldCam[3]or .5
+		me.CameraMaxZoomDistance=oldCam[4]or 128
+		me.CameraMode=oldCam[5]or Enum.CameraMode.Classic
+		local h=me.Character and me.Character:FindFirstChildOfClass("Humanoid")
+		if h then h.CameraOffset=Vector3.zero end
+	end
+	TB.Text=v and"👁️ THIRD PERSON ON"or"👁️ THIRD PERSON OFF"
+end
+
+TB.MouseButton1Click:Connect(function()thirdSet(not third)end)
+
+-- TARGET
+local function part(m)
+	return m:FindFirstChild("HumanoidRootPart")
+		or m:FindFirstChild("UpperTorso")
+		or m:FindFirstChild("Torso")
+		or m:FindFirstChild("Head")
+end
+
+local function find(list)
+	local center=cam.ViewportSize/2
+	local best,bd=nil,aimFov
+
+	for _,m in ipairs(list)do
+		local h=m:FindFirstChildOfClass("Humanoid")
+		local p=part(m)
+		if h and h.Health>0 and p then
+			local s,on=cam:WorldToViewportPoint(p.Position)
+			if on then
+				local d=(Vector2.new(s.X,s.Y)-center).Magnitude
+				if d<bd then best,bd=p,d end
+			end
+		end
+	end
+	return best
+end
+
+local function players()
+	local t={}
+	for _,p in ipairs(P:GetPlayers())do
+		if p~=me and p.Character then t[#t+1]=p.Character end
+	end
+	return t
+end
+
+local function npcs()
+	local t={}
+	for _,m in ipairs(workspace:GetDescendants())do
+		if m:IsA("Model")
+		and not P:GetPlayerFromCharacter(m)
+		and m:FindFirstChildOfClass("Humanoid")
+		and part(m)then
+			t[#t+1]=m
+		end
+	end
+	return t
+end
+
+-- AIM
+R:BindToRenderStep("MultiAim",Enum.RenderPriority.Camera.Value+1,function(dt)
+	if not AIM and not NPC then return end
+
+	local p=find(AIM and players()or npcs())
+	if not p then return end
+
+	local pos=p.Position+p.AssemblyLinearVelocity*prediction
+	local goal=CFrame.lookAt(cam.CFrame.Position,pos)
+
+	cam.CFrame=cam.CFrame:Lerp(goal,math.clamp(dt*60,0,1))
+end)
